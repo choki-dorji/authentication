@@ -6,7 +6,8 @@ from .models import NewUser, UserProfile, Fileupload
 import jwt, datetime
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated 
-
+from rest_framework.generics import RetrieveAPIView
+from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 
 # Create your views here.
 # class RegisterView(APIView):
@@ -19,42 +20,56 @@ from rest_framework.permissions import IsAuthenticated
  
 class RegisterView(ModelViewSet):
     serializer_class = UserSerializer
+    serializer = UserSerializer
+    def post(self, request, *args, **kwargs):
+        serializer.self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        return Response({
+            "user":UserSerializer(user, context=self.get_serializer_context()).data,
+            "messsage":"kucisdu",
+
+            })
+
     queryset = NewUser.objects.all()   
 
 
 class LoginView(APIView):
-    permission_classes = (IsAuthenticated,)
-    def get(self, request):
-        content = {'message': 'Hello, World!'}
-        return Response(content)
-    # def post(self, request):
-        # email = request.data['email']
-        # password = request.data['password']
+    # permission_classes = (IsAuthenticated,)
+    # authentication_classes = (TokenAuthentication,)
+    # serializer_class = UserSerializer
+    # queryset = NewUser.objects.all() 
+    # def get_token(self):
+    #     return self.request.user
+    def post(self, request):
+        email = request.data['email']
+        password = request.data['password']
 
-        # user = NewUser.objects.filter(email=email).first()
+        user = NewUser.objects.filter(email=email).first()
 
-        # if user is None:
-        #     raise AuthenticationFailed('User not found!')
+        if user is None:
+            raise AuthenticationFailed('User not found!')
 
-        # if not user.check_password(password):
-        #     raise AuthenticationFailed('Incorrect password!')
+        if not user.check_password(password):
+            raise AuthenticationFailed('Incorrect password!')
 
-        # payload = {
-        #     'id': user.id,
-        #     'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=60),
-        #     'iat': datetime.datetime.utcnow()
-        # }
+        payload = {
+            'id': user.id,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=60),
+            'iat': datetime.datetime.utcnow()
+        }
 
-        # token = jwt.encode(payload, 'secret', algorithm='HS256')
+        token = jwt.encode(payload, 'secret', algorithm='HS256')
 
-        # response = Response()
+        response = Response()
 
-        # response.set_cookie(key='jwt', value=token, httponly=True)
-        # response.data = {
-        #     'jwt': token,
-        #     'image':'image',
-        # }
-        # return response
+        response.set_cookie(key='jwt', value=token, httponly=True)
+        response.data = {
+            'jwt': token,
+            
+        }
+        return response
 
 
 
